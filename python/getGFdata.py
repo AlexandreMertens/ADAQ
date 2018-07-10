@@ -14,22 +14,24 @@ from datetime import date  # Date
 from datetime import timedelta, datetime
 import os  # To delete a file
 
-GFSummary = True
+Greenfeed_90=True
+Greenfeed_91=False
+
+GFSummary = False
 modifySum = True
 
-colData = True
+colData = False
 getRealTData = True
 getDateCali = True
 getDateRec = True
 getStatus = True
 
-tableau = True
+tableau =True
 
 convertToCsv = True
 deleteXls = True
 
-getUntreatedData = True
-
+getUntreatedData = False
 
 def GFLogin(login, password):
     base_url = "https://greenfeed.c-lockinc.com/GreenFeed/home.php"
@@ -75,16 +77,19 @@ def selectData(xls_sum_file):
     return book
 
 
-def excelToCsv(xls_sum_file, name_sum_file):
+def excelToCsv(xls_sum_file, name_sum_file, withdateYorN='N'):
     # convert the excel file to a CSV file
     today = str(date.today())
     df = pd.read_excel(xls_sum_file)
-    df.to_csv(name_sum_file + '_' + today, index=False)
+    if withdateYorN == 'Y':
+        df.to_csv(name_sum_file + '_' + today, index=False)
+    else :
+        df.to_csv(name_sum_file , index=False)
 
 
-def colTimeData(valeur):
+def colTimeData(valeur,GF):
     # get the realtime data of the greenfeed
-    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getfeederstatistics.php?fid=91")
+    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getfeederstatistics.php?fid="+GF)
 
     tests = str(browser.parsed)
     indval = []
@@ -107,27 +112,27 @@ def colTimeData(valeur):
     return info
 
 
-def dateCali():
+def dateCali(GF):
     # get the date of the last calibration
-    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getstandardcalibrations.php?fid=91")
+    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getstandardcalibrations.php?fid="+GF+"")
 
     calibration = str(browser.parsed)
     inddatcal = str.find(calibration, "<dt>")
     return calibration[inddatcal + 4:inddatcal + 14]
 
 
-def dateRec():
+def dateRec(GF):
     # get the date of the last recovery test
-    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getco2recoveries.php?fid=91")
+    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getco2recoveries.php?fid="+GF+"")
 
     calibrationco2 = str(browser.parsed)
     inddatco2 = str.find(calibrationco2, "<st>")
     return calibrationco2[inddatco2 + 4:inddatco2 + 14]
 
 
-def Status():
+def Status(GF):
     # get the status of the greenfeed
-    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getfeederinfo.php?fid=91")
+    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/ajax/getfeederinfo.php?fid="+GF+"")
 
     feederinfo = str(browser.parsed)
     indfeedstart = str.find(feederinfo, "<status>")
@@ -168,7 +173,7 @@ def permute(liste, k):
     return
 
 
-def getTableau():
+def getTableau(GF):
     # get data for the
     #  table
     temps = timedelta(days=7)
@@ -179,7 +184,7 @@ def getTableau():
     departt = str(depart)
     arrivet = str(arrive)
     departt2 = str(depart2)
-    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/tabledata/cowfeeding.php?fids=0,91&from=" + departt[
+    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/tabledata/cowfeeding.php?fids=0,"+GF+"&from=" + departt[
                                                                                                         0:10] + "&to=" + arrivet[
                                                                                                                          0:10] + "&cons=0&uncons=0&param=1")
 
@@ -188,20 +193,21 @@ def getTableau():
     listtag = Recherche(tableaubrute, 'tag="', 24)
     for o in range(len(listtag)):
         listtag[o] = listtag[o].lstrip('0')
-    listnom = Recherche(tableaubrute, 'name="', 8)
+    listnom = Recherche(tableaubrute, 'name="', None, '" tag')
     listdate = Recherche(tableaubrute, "<date>", 5)
     listdrop = Recherche(tableaubrute, "<v>", None, '</v>')
     listdrop = list(zip(*[iter(listdrop)] * len(listdate)))
 
-    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/tabledata/cowfeeding.php?fids=0,91&from=" + departt2[
+    browser.open("https://greenfeed.c-lockinc.com/GreenFeed/tabledata/cowfeeding.php?fids=0,"+GF+"&from=" + departt2[
                                                                                                         0:10] + "&to=" + arrivet[
                                                                                                                          0:10] + "&cons=0&uncons=0&param=1")
 
     tableaubrute2 = str(browser.parsed)
+    print(tableaubrute)
     listdate2 = Recherche(tableaubrute2, "<date>", 5)
     listdrop2 = Recherche(tableaubrute2, "<v>", None, '</v>')
     listdrop2 = list(zip(*[iter(listdrop2)] * len(listdate2)))
-    listnom2 = Recherche(tableaubrute2, 'name="', 8)
+    listnom2 = Recherche(tableaubrute2, 'name="', None, '" tag')
     ind = []
     for a in listnom:
         ind.append(listnom2.index(a))
@@ -245,25 +251,79 @@ def getTableau():
     return book3
 
 
-def exelColData():
+def exelColData(GF):
     # Creation of the new file
     book2 = Workbook()
     sheet1 = book2.add_sheet('Col_Data')
     valCol = []
+    nomCol = []
+    couCol = []
+    today = str(date.today())
+
+
     if getRealTData:
-        for k in (colTimeData(valeur)):
+        for k in (colTimeData(valeur,GF)):
             valCol.append(k)
+        for l in valeur:
+            nomCol.append(l)
     if getDateCali:
-        valCol.append(dateCali())
+        valCol.append(dateCali(GF))
+        nomCol.append("Dernière calibration")
     if getDateRec:
-        valCol.append(dateRec())
+        valCol.append(dateRec(GF))
+        nomCol.append("Dernière recovery")
+    var1 = len(valCol)
+    nomCol.append('Date')
+    valCol.append(today)
     if getStatus:
-        valCol.append(Status())
+        valCol.append(Status(GF))
+        nomCol.append("Statut")
     lenVal = len(valCol)
 
-    for i in range(0, lenVal):
-        sheet1.write(i, 0, valCol[i])
+#couleur pour les limites de valeurs
 
+
+    if float(valCol[0][0:len(valCol[0])-4]) < 26:
+        couCol.append("red")
+    else:
+        couCol.append("black")
+
+    if float(valCol[1][0:len(valCol[0])-3])<-30 or float(valCol[1][0:len(valCol[0])-3])>50:
+        couCol.append("red")
+    else:
+        couCol.append("black")
+
+    if float(valCol[0][0:len(valCol[0])-4])<30:
+        couCol.append("red")
+    else:
+        couCol.append("black")
+
+    aujd = datetime.today()
+    dc=datetime.strptime(dateCali(GF), '%Y-%m-%d')
+    lastCali=int(str(aujd-dc)[0:2])
+
+    if lastCali>14:
+        couCol.append("red")
+    elif lastCali>7 and lastCali<15:
+        couCol.append("orange")
+    else:
+        couCol.append("black")
+
+    dr = datetime.strptime(dateRec(GF), '%Y-%m-%d')
+    lastReco = int(str(aujd - dr)[0:2])
+
+    if lastReco > 30:
+        couCol.append("red")
+    elif lastReco > 21 and lastCali < 31:
+        couCol.append("orange")
+    else:
+        couCol.append("black")
+
+    for i in range(0, lenVal):
+        sheet1.write(i, 0, nomCol[i])
+        sheet1.write(i, 1, valCol[i])
+    for k in range(0,var1):
+        sheet1.write(k, 2, couCol[k])
     return book2
 
 
@@ -315,7 +375,7 @@ if modifySum and GFSummary:
 
 if convertToCsv and GFSummary:
     try:
-        excelToCsv("GF_Summary.xls", name_sum_file)
+        excelToCsv("GF_Summary.xls", name_sum_file,'Y')
     except:
         print("Erreur : la convertion du résumé en CSV est impossible !")
 
@@ -325,46 +385,90 @@ if deleteXls and GFSummary:
     except:
         print("Erreur : la supression du document excel est impossible !")
 
-if colData:
-    try:
-        xls_file2 = exelColData()
-        xls_file2.save('Col_Data.xls')
-    except:
-        print("Erreur : la récupération des données d'état du greenfeed est impossible !")
-
-if convertToCsv and colData:
-    try:
-        excelToCsv("Col_Data.xls", "colData")
-    except:
-        print("Erreur : la convertion des données d'état du greenfeed en CSV est impossible !")
-
-if deleteXls and colData:
-    try:
-        os.remove('Col_Data.xls')
-    except:
-        print("Erreur : la supression du document excel est impossible !")
-
-if tableau:
-    try:
-        xls_file3 = getTableau()
-        xls_file3.save('tableau.xls')
-    except:
-        print("Erreur : la récupération du tableau des animaux est impossible !")
-
-if convertToCsv and tableau:
-    try:
-        excelToCsv("tableau.xls", "Tableau")
-    except:
-        print("Erreur : la convertion du tableau des animaux en CSV est impossible !")
-
-if deleteXls and tableau:
-    try:
-        os.remove('tableau.xls')
-    except:
-        print("Erreur : la supression du document excel est impossible !")
-
 if getUntreatedData:
     try:
         untreatedData()
     except:
         print("Erreur : la sauvegarde des données brutes est impossible !")
+
+# 91
+GF=str(91)
+if colData and Greenfeed_91:
+#    try:
+        xls_file2 = exelColData(GF)
+        xls_file2.save('Greenfeed_'+GF+'/Col_Data_'+GF+'.xls')
+ #   except:
+  #      print("Erreur : la récupération des données d'état du greenfeed est impossible !")
+
+if convertToCsv and colData and Greenfeed_91:
+    try:
+        excelToCsv("Greenfeed_"+GF+"/Col_Data_"+GF+".xls", "Greenfeed_"+GF+"/colData_"+GF,'N')
+    except:
+        print("Erreur : la convertion des données d'état du greenfeed en CSV est impossible !")
+
+if deleteXls and colData and Greenfeed_91:
+    try:
+        os.remove('Greenfeed_'+GF+'/Col_Data_'+GF+'.xls')
+    except:
+        print("Erreur : la supression du document excel est impossible !")
+
+if tableau and Greenfeed_91:
+#    try:
+        xls_file3 = getTableau(GF)
+        xls_file3.save('Greenfeed_'+GF+'/tableau_'+GF+'.xls')
+#    except:
+ #       print("Erreur : la récupération du tableau des animaux est impossible !")
+
+if convertToCsv and tableau and Greenfeed_91:
+    try:
+        excelToCsv('Greenfeed_'+GF+'/tableau_'+GF+'.xls', "Greenfeed_"+GF+"/Tableau_"+GF, 'N')
+    except:
+        print("Erreur : la convertion du tableau des animaux en CSV est impossible !")
+
+if deleteXls and tableau and Greenfeed_91:
+    try:
+        os.remove('Greenfeed_'+GF+'/tableau_'+GF+'.xls')
+    except:
+        print("Erreur : la supression du document excel est impossible !")
+
+
+#90
+GF=str(90)
+if colData and Greenfeed_90:
+    try:
+        xls_file2 = exelColData(GF)
+        xls_file2.save('Greenfeed_'+GF+'/Col_Data_'+GF+'.xls')
+    except:
+        print("Erreur : la récupération des données d'état du greenfeed est impossible !")
+
+if convertToCsv and colData and Greenfeed_90:
+    try:
+        excelToCsv("Greenfeed_"+GF+"/Col_Data_"+GF+".xls", "Greenfeed_"+GF+"/colData_"+GF,'N')
+    except:
+        print("Erreur : la convertion des données d'état du greenfeed en CSV est impossible !")
+
+if deleteXls and colData and Greenfeed_90:
+    try:
+        os.remove('Greenfeed_'+GF+'/Col_Data_'+GF+'.xls')
+    except:
+        print("Erreur : la supression du document excel est impossible !")
+
+if tableau and Greenfeed_90:
+    try:
+        xls_file3 = getTableau(GF)
+        xls_file3.save('Greenfeed_'+GF+'/tableau_'+GF+'.xls')
+    except:
+        print("Erreur : la récupération du tableau des animaux est impossible !")
+
+if convertToCsv and tableau and Greenfeed_90:
+    try:
+        excelToCsv('Greenfeed_'+GF+'/tableau_'+GF+'.xls', "Greenfeed_"+GF+"/Tableau_"+GF, 'N')
+    except:
+        print("Erreur : la convertion du tableau des animaux en CSV est impossible !")
+
+if deleteXls and tableau and Greenfeed_90:
+    try:
+        os.remove('Greenfeed_'+GF+'/tableau_'+GF+'.xls')
+    except:
+        print("Erreur : la supression du document excel est impossible !")
+
