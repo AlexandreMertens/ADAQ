@@ -1,0 +1,162 @@
+
+.entête {
+  height: 100px;
+  background-color: rgb(52,58,64);
+  color: white;
+}
+.colonne-centree
+{
+float: none;
+margin: 20px auto;
+}
+
+.onglet {
+  background-color:   #456687  ;
+  border-bottom-width: 0;
+}
+.nav-tabs > .active > a, .nav-tabs > .active > a:hover, .nav-tabs > .active > a:focus {
+	color: #555555;
+	background-color: #eee;
+	border: 0px solid #black;
+	border-bottom-color: transparent;
+	cursor: default;
+}
+a {
+	color: #bbb;
+	text-decoration: none;
+	background-color: transparent;
+	-webkit-text-decoration-skip: objects;
+}
+.statut {
+  margin-top: 30px;
+  text-align: left;
+  color: #ddd;
+}
+.bouton {
+margin-top: 10;
+}
+.contenu {
+  margin-top: 0px;
+  height: 100%;
+}
+.nomcol {
+  margin-top: 30px;
+  border-right:solid 1px #aaa;
+  background-color: ;
+  height: 100%;
+
+}
+.valcol {
+  margin-top: 30px;
+}
+.col {
+  border-right:solid 3px rgb(52,58,64);
+  background-color: ;
+  height: 100%;
+}
+
+.tableau {
+  margin-top: 30px;
+  margin-left: 40px;
+}
+.voir {
+  background-color: red;
+}
+.table td, .table th body{
+	padding: .20rem;
+	vertical-align: top;
+  text-align: center;
+	border-top: 1px solid #dee2e6;
+}
+.table th, .table td body{
+	padding: 4px;
+	line-height: 20px;
+	text-align: center;
+	vertical-align: top;
+	border-top: : 1px solid #dddddd;
+  background-color: #bbb;
+}
+.table-striped tbody tr:nth-of-type(2n) {
+	background-color: #bbb;
+}
+.table thead {
+  background-color: #456687;
+  color: lightgray;
+}
+.table {
+  border-bottom: 2px solid #456687;
+}
+#============================== onglets ======================================
+
+* {
+  margin: 0;
+  padding: 0;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+body {
+  padding: 2px;
+  color: #333;
+  background: #eee;
+}
+.tabs {
+  width: 650px;
+  float: none;
+  list-style: none;
+  position: relative;
+  margin: 80px 0 0 10px;
+}
+.tabs li {
+  float: left;
+  display: block;
+}
+.tabs input[type="radio"] {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+}
+.tabs label {
+  display: block;
+  padding: 14px 21px;
+  border-radius: 2px 2px 0 0;
+  font-size: 20px;
+  background: #ccc;
+  cursor: pointer;
+  position: relative;
+  top: 4px;
+  -moz-transition: all 0.2s ease-in-out;
+  -o-transition: all 0.2s ease-in-out;
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+.tabs [id^="tab"]:checked + p {
+    color:black;
+    -moz-transition: all 2.2s ease-in-out;
+    -o-transition: all 2.2s ease-in-out;
+    -webkit-transition: all 2.2s ease-in-out;
+    transition: all 2.2s ease-in-out;
+}
+.tabs label:hover {
+  background: #fff;
+}
+.tabs .tab-content {
+  z-index: 2;
+  display: none;
+  overflow: hidden;
+  width: 100%;
+  font-size: 17px;
+  line-height: 25px;
+  padding: 25px;
+  position: absolute;
+  top: 53px;
+  left: 0;
+  background: #fff;
+}
+.tabs [id^="tab"]:checked + label {
+  background: #fff;
+}
+.tabs [id^="tab"]:checked ~ [id^="tab-content"] {
+  display: block;
+
+}
