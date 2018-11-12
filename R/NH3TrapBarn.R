@@ -1,4 +1,4 @@
-# Acquisision données CVP
+# Acquisision donn?es CVP
 #
 # Reset environment
 #
@@ -13,7 +13,7 @@ num<-as.numeric(format(Sys.time(),"%Y%m%d%H%M"))[1]# Nom du ficher: un chiffre s
 
 Site<-c("Barn")
 RawFile<-paste(prefix,"_",Site,"_",num,".txt",sep=c(""))#Direct recoding file 
-CSVFile<-paste(prefix,"_",Site,"_",num,".csv",sep=c(""))#Daily Save of Data
+CSVFile<-paste(prefix,"_",Site,"_all.csv",sep=c(""))#Daily Save of Data
 
 # Libraries
 #
@@ -46,10 +46,14 @@ SavePlotTime<-Sys.time()
 
 # layout(matrix(c(1:10),5,2))
 
-
-Header<-c("V1;V2;V3;V4;V4;V6;V7;V7;V9;V10;V11;V12;V13;V14;V15;V16;V17;V18;V19;V20;V21;V22;V23;V24;V25;V26;V27;V28;V29;V30;V31;V32;V33;V34;V35;Time")
+#Header<-c("V1;V2;V3;V4;V4;V6;V7;V7;V9;V10;V11;V12;V13;V14;V15;V16;V17;V18;V19;V20;V21;V22;V23;V24;V25;V26;V27;V28;V29;V30;V31;V32;V33;V34;V35;Time")
+Header<-c("TimeCounter,DP_T,DP1,DP2,DP3,DP4,P_A,T_T,T1,T2,T3,T4,T_A,NumberMeas,Datetime")
 
 cat(Header,file=RawFile,sep=c("\n"))
+
+if (!file.exists(CSVFile)){
+  write.table(Header, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
+}
 
 while(Sys.time() < stopTime){
   
@@ -69,30 +73,33 @@ while(Sys.time() < stopTime){
       }else{
         ToSave<-gsub(">",paste0(";",NA),ToSave)
       }
+      
+      print(paste("last recording NH3 Trap at barn: ",Sys.time()))
+      print(ToSave)
       cat(ToSave,file=RawFile,append=TRUE,sep=c("\n"))
-      # print("ToSave")
-      # print(ToSave)
+      write.table(ToSave, file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
+      
       ToSave<-""
     }else{
       ToSave<-newText
     }
-    if(Sys.time()>(SavePlotTime+SaveFreq)){
-      
-      Table<-read.table(RawFile,header=TRUE,dec=",",sep=";",stringsAsFactors = FALSE)
-      write.table(x=Table,file=CSVFile,sep=c(";"),dec=(","),row.names =F)
-      print(paste("last recording NH3 TRAP",Sys.time()))
-      
-      DataToPlot<-Table
-      DataToPlot$Time<-as_datetime(ymd_hms(DataToPlot$Time,tz=Sys.timezone()),tz=Sys.timezone())
-      PlotTimeRange<-c(max(DataToPlot$Time,na.rm=TRUE)-3600*4,max(DataToPlot$Time,na.rm=TRUE))
-       
-      DataToPlot<-DataToPlot[DataToPlot$Time>PlotTimeRange[1]&DataToPlot$Time<=PlotTimeRange[2],]
-      
-      plot(x=DataToPlot$Time,y=DataToPlot$V12,pch=21)
-       
-      SavePlotTime<-Sys.time()
-      
-    }
+    # if(Sys.time()>(SavePlotTime+SaveFreq)){
+    #   
+    #   Table<-read.table(RawFile,header=TRUE,dec=",",sep=";",stringsAsFactors = FALSE)
+    #   write.table(x=Table,file=CSVFile,sep=c(";"),dec=(","),row.names =F)
+    #   print(paste("last recording NH3 TRAP",Sys.time()))
+    #   
+    #   DataToPlot<-Table
+    #   DataToPlot$Time<-as_datetime(ymd_hms(DataToPlot$Time,tz=Sys.timezone()),tz=Sys.timezone())
+    #   PlotTimeRange<-c(max(DataToPlot$Time,na.rm=TRUE)-3600*4,max(DataToPlot$Time,na.rm=TRUE))
+    #    
+    #   DataToPlot<-DataToPlot[DataToPlot$Time>PlotTimeRange[1]&DataToPlot$Time<=PlotTimeRange[2],]
+    #   
+    #   plot(x=DataToPlot$Time,y=DataToPlot$V12,pch=21)
+    #    
+    #   SavePlotTime<-Sys.time()
+    #   
+    # }
   }
 }
 close(con)
