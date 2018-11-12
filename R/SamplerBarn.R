@@ -1,4 +1,4 @@
-# Acquisision données systeme mesure NH3 Etable, pression et temperature
+# Acquisision donn?es systeme mesure NH3 Etable, pression et temperature
 #
 # Reset environment
 #
@@ -12,8 +12,8 @@ prefix <- "./../csv/SamplerBarn/GasSampling"
 
 num<-as.numeric(format(Sys.time(),"%Y%m%d%H%M"))[1]# Nom du ficher: un chiffre sous le format anneemoisjourheureminute , deux caracteres a chaque fois. Example pour 9 : 09
 
-RawFile<-paste(prefix,"_",num,".txt",sep=c(""))#Direct reconding file 
-CSVFile<-paste(prefix,"_",num,".csv",sep=c(""))#Daily Save of Data
+RawFile<-paste(prefix,"_",num,".txt",sep=c("")) #Direct reconding file 
+CSVFile<-paste(prefix,"_all.csv",sep=c("")) #Save all Data
   
 # Libraries
 #
@@ -50,6 +50,10 @@ layout(matrix(c(1:2),2,1))
 Header<-"Site,Washing_position,Analyser_position,Washing_line,Analyser_line,Mode,DP_washing,DP_analyser,Temper_washing,Temper_analyser,Analog_population,Sampling_duration,Warning,Time"
 cat(Header,file=RawFile,sep=c("\n"))
 
+if (!file.exists(CSVFile)){
+  write.table(Header, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
+}
+
 while(Sys.time() < stopTime){
   
   if(Read){newText <- read.serialConnection(con)}
@@ -68,36 +72,39 @@ while(Sys.time() < stopTime){
       }else{
         ToSave<-gsub(">",paste0(",",NA),ToSave)
       }
+      print(paste("last recording Sampler",Sys.time()))
+      print(ToSave)
       cat(ToSave,file=RawFile,append=TRUE,sep=c("\n"))
+      write.table(ToSave, file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
       ToSave<-""
     }else{
       ToSave<-newText
     }
-    if(Sys.time()>(SavePlotTime+SaveFreq)){
-      
-      Table<-read.table(RawFile,header=TRUE,dec=".",sep=",")
-      write.table(x=Table,file=CSVFile,sep=c(";"),dec=(","),row.names =F)
-      #print("plot Data")
-      #plot(x=as_datetime(ymd_hms(Table$Time)),y=Table$DP_analyser,bg=as.factor(Table$Analyser_position),col=as.factor(Table$Analyser_position),pch=21)
-      #plot(x=as_datetime(ymd_hms(Table$Time)),y=Table$DP_washing,bg=as.factor(Table$Washing_position),col=as.factor(Table$Washing_position),pch=21)
-      
-      print(paste("last recording Sampler",Sys.time()))
-      
-      DataToPlot<-Table
-      DataToPlot$Time<-as_datetime(ymd_hms(DataToPlot$Time,tz=Sys.timezone()),tz=Sys.timezone())
-      PlotTimeRange<-c(max(DataToPlot$Time,na.rm=TRUE)-3600*4,max(DataToPlot$Time,na.rm=TRUE))
-      
-      DataToPlot<-DataToPlot[DataToPlot$Time>PlotTimeRange[1]&DataToPlot$Time<=PlotTimeRange[2],]
-      
-      plot(x=DataToPlot$Time,y=DataToPlot$DP_analyser,bg=as.factor(DataToPlot$Analyser_position),col=as.factor(DataToPlot$Analyser_position),pch=21)
-      plot(x=DataToPlot$Time,y=DataToPlot$DP_washing,bg=as.factor(DataToPlot$Washing_position),col=as.factor(DataToPlot$Washing_position),pch=21)
-      
-      
-      
-      #ggplot(data=Table,aes(x=as_datetime(ymd_hms(Time,tz=Sys.timezone(),tz=Sys.timezone()),y=DP_analyser,color=Analyser_position)))+
-        #geom_point()
-      SavePlotTime<-Sys.time()
-    }
+    # if(Sys.time()>(SavePlotTime+SaveFreq)){
+    #   
+    #   Table<-read.table(RawFile,header=TRUE,dec=".",sep=",")
+    #   write.table(x=Table,file=CSVFile,sep=c(";"),dec=(","),row.names =F)
+    #   #print("plot Data")
+    #   #plot(x=as_datetime(ymd_hms(Table$Time)),y=Table$DP_analyser,bg=as.factor(Table$Analyser_position),col=as.factor(Table$Analyser_position),pch=21)
+    #   #plot(x=as_datetime(ymd_hms(Table$Time)),y=Table$DP_washing,bg=as.factor(Table$Washing_position),col=as.factor(Table$Washing_position),pch=21)
+    #   
+    #   print(paste("last recording Sampler",Sys.time()))
+    #   
+    #   DataToPlot<-Table
+    #   DataToPlot$Time<-as_datetime(ymd_hms(DataToPlot$Time,tz=Sys.timezone()),tz=Sys.timezone())
+    #   PlotTimeRange<-c(max(DataToPlot$Time,na.rm=TRUE)-3600*4,max(DataToPlot$Time,na.rm=TRUE))
+    #   
+    #   DataToPlot<-DataToPlot[DataToPlot$Time>PlotTimeRange[1]&DataToPlot$Time<=PlotTimeRange[2],]
+    #   
+    #   plot(x=DataToPlot$Time,y=DataToPlot$DP_analyser,bg=as.factor(DataToPlot$Analyser_position),col=as.factor(DataToPlot$Analyser_position),pch=21)
+    #   plot(x=DataToPlot$Time,y=DataToPlot$DP_washing,bg=as.factor(DataToPlot$Washing_position),col=as.factor(DataToPlot$Washing_position),pch=21)
+    #   
+    #   
+    #   
+    #   #ggplot(data=Table,aes(x=as_datetime(ymd_hms(Time,tz=Sys.timezone(),tz=Sys.timezone()),y=DP_analyser,color=Analyser_position)))+
+    #     #geom_point()
+    #   SavePlotTime<-Sys.time()
+    # }
   }
 }
 close(con)
