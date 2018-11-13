@@ -14,7 +14,7 @@ num<-as.numeric(format(Sys.time(),"%Y%m%d%H%M"))[1]# Nom du ficher: un chiffre s
 
 RawFile<-paste(prefix,"_",num,".txt",sep=c("")) #Direct reconding file 
 CSVFile<-paste(prefix,"_all.csv",sep=c("")) #Save all Data
-  
+
 # Libraries
 #
 library(serial)
@@ -51,7 +51,8 @@ Header<-"Site,Washing_position,Analyser_position,Washing_line,Analyser_line,Mode
 cat(Header,file=RawFile,sep=c("\n"))
 
 if (!file.exists(CSVFile)){
-  write.table(Header, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
+  Header.df <- read.table(text=Header, sep=",")
+  write.table(Header.df, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 while(Sys.time() < stopTime){
@@ -61,7 +62,7 @@ while(Sys.time() < stopTime){
     print(newText)
     if(substr(newText,1,1)==" "){newText<-substr(newText,2,nchar(newText))}
     Time<-Sys.time()
-
+    
     if((substr(newText,nchar(newText),nchar(newText))==">")&(substr(newText,1,1)=="<"||(substr(newText,1,2)=="\n<"))){
       if(substr(newText,1,1)=="\n"){ToSave<-c(ToSave,substr(newText,2,nchar(newText)))}else{ToSave<-c(ToSave,newText)}
       
@@ -75,7 +76,8 @@ while(Sys.time() < stopTime){
       print(paste("last recording Sampler",Sys.time()))
       print(ToSave)
       cat(ToSave,file=RawFile,append=TRUE,sep=c("\n"))
-      write.table(ToSave, file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
+      print(read.csv(text = ToSave, sep=",", stringsAsFactors = FALSE, header = FALSE))
+      write.table(read.csv(text = ToSave, sep=",", stringsAsFactors = FALSE, header = FALSE), file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
       ToSave<-""
     }else{
       ToSave<-newText

@@ -51,7 +51,8 @@ Header<-c("State,Info,Temp1,PC1,Temp2,PC2,Temp3,PC3,Temp4,PC4,TempExt,PC5,Dateti
 cat(Header,file=RawFile,sep=c("\n"))
 
 if (!file.exists(CSVFile)){
-  write.table(Header, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
+  Header.df <- read.table(text=Header, sep=",")
+  write.table(Header.df, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 while(Sys.time() < stopTime){
@@ -72,8 +73,10 @@ while(Sys.time() < stopTime){
       }else{
         ToSave<-gsub(">",paste0(",",NA),ToSave)
       }
+      print(paste("last recording CVP and temprature barn",Sys.time()))
+      print(ToSave)
       cat(ToSave,file=RawFile,append=TRUE,sep=c("\n"))
-      write.table(ToSave, file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
+      write.table(read.csv(text = ToSave, sep=",", stringsAsFactors = FALSE, header = FALSE), file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
       ToSave<-""
     }else{
       ToSave<-newText
@@ -127,3 +130,4 @@ while(Sys.time() < stopTime){
   }
 }
 close(con)
+

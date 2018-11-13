@@ -47,12 +47,13 @@ SavePlotTime<-Sys.time()
 # layout(matrix(c(1:10),5,2))
 
 #Header<-c("V1;V2;V3;V4;V4;V6;V7;V7;V9;V10;V11;V12;V13;V14;V15;V16;V17;V18;V19;V20;V21;V22;V23;V24;V25;V26;V27;V28;V29;V30;V31;V32;V33;V34;V35;Time")
-Header<-c("TimeCounter,DP_T,DP1,DP2,DP3,DP4,P_A,T_T,T1,T2,T3,T4,T_A,NumberMeas,Datetime")
+Header<-c("TimeCounter;DP_T;DP1;DP2;DP3;DP4;P_A;T_T;T1;T2;T3;T4;T_A;NumberMeas;Datetime")
 
 cat(Header,file=RawFile,sep=c("\n"))
 
 if (!file.exists(CSVFile)){
-  write.table(Header, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
+  Header.df <- read.table(text=Header, sep=";")
+  write.table(Header.df, file = CSVFile, sep = ";", dec = ",", quote = FALSE, col.names = FALSE, row.names = FALSE)
 }
 
 while(Sys.time() < stopTime){
@@ -77,7 +78,7 @@ while(Sys.time() < stopTime){
       print(paste("last recording NH3 Trap at barn: ",Sys.time()))
       print(ToSave)
       cat(ToSave,file=RawFile,append=TRUE,sep=c("\n"))
-      write.table(ToSave, file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
+      write.table(read.csv(text = ToSave, sep=";", stringsAsFactors = FALSE, header = FALSE), file = CSVFile, sep = ";", dec = ",", append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE)
       
       ToSave<-""
     }else{
