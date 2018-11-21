@@ -12,6 +12,12 @@ setwd("/home/alexandre/GES/dev/ADAQ/R")
 ## Functions and values needed ##
 #################################
 
+# function that change the format of the csv file
+csv2csv <- function(fileIn, fileOut){
+  data.df <- read.csv(file=fileIn, header=TRUE, sep=",",dec=".", stringsAsFactors=FALSE)
+  write.table(data.df, file=fileOut, sep=";",dec=",")
+}
+
 # function that check if entries are characters and identical -> return the value, if not identical, return NA and if other that character -> the mean.
 adaptedMean <- function(values){
 
@@ -22,13 +28,13 @@ adaptedMean <- function(values){
     }
     else return(NA)
   }
-  else return(mean(values))
+  else return(mean(values, na.rm=TRUE))
 }
 
 ## Function that aggregate the data frame by 5 sec using the adaptedMean
 ## To be added: time selection (over the three last hours?)
 
-aggregBy5Sec <- function(suffix, file, timeTitle, useTimeSel = FALSE, timeSel = 3){
+aggregBy5Sec <- function(suffix = "suf", file = "test.csv", timeTitle = "timeTitle", useTimeSel = FALSE, timeSel = 3){
 
   data.df <- read.csv(file=file, header=TRUE, sep=";",dec=",", stringsAsFactors=FALSE)
   data.df[,c(timeTitle)] <- ymd_hms(data.df[,c(timeTitle)])
@@ -57,6 +63,7 @@ mmolCH4 <- 16.05 # g/mol
 mmolCO2 <- 44.01 # g/mol
 mmolN2O <- 44.01 # g/mol
 mmolNH3 <- 17.03 # g/mol
+mmolH2O <- 18.02 # g/mol
 
 ## compute emissions from :
 ##    cc: concentration of the analysed gaz in ppm
@@ -78,6 +85,17 @@ computeEmission <- function(cc, pc, pa = 1, t, mmol){
   return(em)
 }
 
+# celsius to kelvin
+KelvinFct<-function(x){x+273.15}
+# (g/hour per measuring point), MMg Molar mas of the gas (g/mole), ConcWetOut&ConcWetIn in ppm humid air.
+# rely on constat mole of dry air at input and output, Flow wet is pc of max low of humid air per hour at output,
+# Press and Temperature are the pressur (Pa) and temperature (°C) at air outlet
+EmissionFCt<-function(DF,ConcWetOut,ConcWetIn,ConcWetOutH2O,ConcWetINH2O,Press,FlowWet,Temperature,GasEmitted){
+  Emission_vector<-(DF[,ConcWetOut]-DF[,ConcWetIn]*((1-DF[,ConcWetOutH2O]/(10^6))/(1-DF[,ConcWetINH2O]/(10^6))))/(10^6)*(DF[,Press]*DF[,FlowWet]*MaxFlow/100)/(RConstantPa*KelvinFct(DF[,Temperature]))*MMg[GasEmitted][1,1]
+  return(Emission_vector)
+}
+
+
 #######################
 ## Code start here ! ##
 #######################
@@ -85,61 +103,62 @@ computeEmission <- function(cc, pc, pa = 1, t, mmol){
 print(getwd())
 
 # CVP data frame
+
+#   badly written file
+csv2csv("./../csv/CVPBarn/CVP_Barn_all_until20181113.csv", "./../csv/CVPBarn/CVP_Barn_all_until20181113_goodCsv.csv")
+csv2csv("./../csv/SamplerBarn/GasSampling_all_until20181113.csv", "./../csv/SamplerBarn/GasSampling_all_until20181113_goodCsv.csv")
+
+
 cvp_suffix <- "CVP"
-cvp_file <- "./../csv/CVP_Barn/CVP_Barn_all.csv"
+cvp_files <- list(
+  "./../csv/CVPBarn/CVP_Barn_all.csv",
+  "./../csv/CVPBarn/CVP_Barn_all_until20181113_goodCsv.csv")
 cvp_timeTitle <- "Datetime"
-cvp.df <- aggregBy5Sec(cvp_suffix, cvp_file, cvp_timeTitle)
+cvps.ls <- lapply(cvp_files,  function(x){ return(aggregBy5Sec(cvp_suffix, x, cvp_timeTitle))})
+cvp.df <- unique(do.call("rbind", cvps.ls))
+
+# ggplot(cvp.df, aes(x=Datetime, y=PC1))+geom_point()
 
 # ADC data frame
 
 adc_suffix <- "ADC"
-adc_file <- "./../csv/ADCGasData/ADCGasData_18111400.CSV"
+adc_files <- list(
+  "./../csv/ADCBarn/ADCGasData_18110800.CSV",
+  "./../csv/ADCBarn/ADCGasData_18110900.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111000.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111100.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111200.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111300.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111400.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111500.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111600.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111700.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111800.CSV",
+  "./../csv/ADCBarn/ADCGasData_18111900.CSV")
 adc_timeTitle <- "AdjustedTime"
-adc.df <- aggregBy5Sec(adc_suffix, adc_file, adc_timeTitle)
+
+adcs.ls <- lapply(adc_files,  function(x){ return(aggregBy5Sec(adc_suffix, x, adc_timeTitle))})
+adc.df <- unique(do.call("rbind", adcs.ls))
+adc.df$ADCtime5sec <- adc.df$ADCtime5sec-as.difftime(130,unit="secs")
 
 # Gas Sampling data frame
 
 gs_suffix  <- "GS"
-gs_file <- "./../csv/GasSampling/GasSampling_all.csv"
+gs_files <- list(
+  "./../csv/SamplerBarn/GasSampling_all_until20181113.csv",
+  "./../csv/SamplerBarn/GasSampling_all_until20181116.csv",
+  "./../csv/SamplerBarn/GasSampling_all.csv")
 gs_timeTitle <- "Time"
 gs.df <- aggregBy5Sec(gs_suffix, gs_file, gs_timeTitle)
 
-# merging all
-
-# View(cvp.df)
-# View(adc.df)
-# View(gs.df)
+# merging....
 
 merged.df <- merge(cvp.df, adc.df, by.x = "CVPtime5sec", by.y = "ADCtime5sec", all = TRUE)
 merged.df <- merge(merged.df, gs.df, by.x = "CVPtime5sec", by.y = "GStime5sec", all = TRUE)
 
-merged.df$PC <-
-  merged.df$PC1*(merged.df$Analyser_position == 1) +
-  merged.df$PC2*(merged.df$Analyser_position == 2) +
-  merged.df$PC3*(merged.df$Analyser_position == 3) +
-  merged.df$PC4*(merged.df$Analyser_position == 4) +
-  merged.df$PC1*(merged.df$Analyser_position == "Ext")
+colnames(merged.df)
 
-
-merged.df$PCExt <- merged.df$PC # TO BE CORRECTED FOR H20
-
-merged.df$Temp <-
-  merged.df$Temp1*(merged.df$Analyser_position == 1) +
-  merged.df$Temp2*(merged.df$Analyser_position == 2) +
-  merged.df$Temp3*(merged.df$Analyser_position == 3) +
-  merged.df$Temp4*(merged.df$Analyser_position == 4) +
-  merged.df$TempExt*(merged.df$Analyser_position == "Ext")
-
-merged.df$CH4em <- 24 * computeEmission(cc = merged.df$CH4, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolCH4)
-merged.df$CO2em <- 24 * computeEmission(cc = merged.df$CO2, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolCO2)
-merged.df$N2Oem <- 24 * computeEmission(cc = merged.df$N2O, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolN2O)
-merged.df$NH3em <- 24 * computeEmission(cc = merged.df$NH3, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolNH3)
-
-merged.df <- merged.df[!(is.na(merged.df$CH4em) | is.na(merged.df$Status)),]
-
-merged.df
-
-## Removing first entries for each position and entries after each calibration
+merged.df <- merged.df[!(is.na(merged.df$CH4) | is.na(merged.df$Analyser_position) | is.na(merged.df$PC3)),]
 
 merged.df$transition <- !(lag(merged.df$Analyser_position) == merged.df$Analyser_position)
 merged.df$transition_time <- ifelse(merged.df$transition, merged.df$CVPtime5sec, NA)
@@ -151,24 +170,82 @@ merged.df$statusChange_time <- ifelse(merged.df$statusChange, merged.df$CVPtime5
 merged.df$statusChange_time <- na.locf(merged.df$statusChange_time, na.rm = FALSE)
 merged.df$time_to_statusChange <- as.difftime(as.numeric(merged.df$CVPtime5sec-merged.df$statusChange_time), units="secs")
 
-write.table(merged.df, file = "temp.csv", sep=";")
+selected_data.df <- merged.df[merged.df$time_to_transition > 170 & merged.df$Status == "Connected" & merged.df$time_to_statusChange > 170,]
+
+# aggregate by hour
+selected_data.df$Datetime <- format(selected_data.df$AdjustedTime, '%Y-%m-%d %H')
+
+hourly_data.df <- aggregate(selected_data.df, by = list(selected_data.df$Datetime, selected_data.df$Analyser_position), FUN = adaptedMean)
+
+extValue <- function(df, gas, datetime){
+  value <- df[ which(df[,"Datetime"] == datetime & df[,"Analyser_position"] == "Ext"), gas]
+  return(value)
+}
+
+gas_list = list("CO2", "CH4", "N2O", "NH3", "H2O")
+
+for (gas in gas_list){
+  name <- paste(gas,"_","Ext")
+  hourly_data.df[,name] <- sapply(hourly_data.df$Datetime, function(x) { return(extValue(hourly_data.df, gas, x))})
+}
 
 
-selected_data.df <- merged.df[merged.df$time_to_transition > 240 & merged.df$Status == "Connected" & merged.df$time_to_statusChange > 180,]
+colnames(merged.df)
+
+median(merged.df$TimeDifference)
+
+help("")
+
+ggplot(merged.df, aes(x=hour(AdjustedTime), y=TimeDifference)) + stat_summary(fun.y = "min", geom = "point")
+
+# remove external rows
+ggplot(merged.df[hour(merged.df$AdjustedTime)>1 & hour(merged.df$AdjustedTime) < 8 ,], aes(x=AdjustedTime, y=CH4, color=Analyser_position)) + geom_point()
+
+ggplot(selected_data.df[], aes(x=CVPtime5sec, y=CO2, color=Analyser_position)) + geom_point()
+ggplot(hourly_data.df, aes(x=Datetime, y=CH4, color=Analyser_position)) + geom_point()
+
+
+write.table(merged.df, file = "temp.csv", sep=";", row.names=FALSE)
 
 
 
+
+
+#  merged.df$PC <-
+#    merged.df$PC1*(merged.df$Analyser_position == 1) +
+#    merged.df$PC2*(merged.df$Analyser_position == 2) +
+#    merged.df$PC3*(merged.df$Analyser_position == 3) +
+#    merged.df$PC4*(merged.df$Analyser_position == 4) +
+#    merged.df$PC1*(merged.df$Analyser_position == "Ext")
+#
+#
+#  merged.df$PCExt <- merged.df$PC # TO BE CORRECTED FOR H20
+#
+#  merged.df$Temp <-
+#    merged.df$Temp1*(merged.df$Analyser_position == 1) +
+#    merged.df$Temp2*(merged.df$Analyser_position == 2) +
+#    merged.df$Temp3*(merged.df$Analyser_position == 3) +
+#    merged.df$Temp4*(merged.df$Analyser_position == 4) +
+#    merged.df$TempExt*(merged.df$Analyser_position == "Ext")
+
+# merged.df$CH4em <- 24 * computeEmission(cc = merged.df$CH4, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolCH4)
+# merged.df$CO2em <- 24 * computeEmission(cc = merged.df$CO2, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolCO2)
+# merged.df$N2Oem <- 24 * computeEmission(cc = merged.df$N2O, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolN2O)
+# merged.df$NH3em <- 24 * computeEmission(cc = merged.df$NH3, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolNH3)
+# merged.df$H2Oem <- 24 * computeEmission(cc = merged.df$NH3, pc = merged.df$PC, t = merged.df$Temp, mmol = mmolNH3)
 
 # write.table(selected_data.df, file = "temp.csv", sep=";")
 
 
-ggplot(selected_data.df, aes(x=AdjustedTime, y=CO2em, col=as.character(Analyser_position))) + geom_point()
+#ggplot(adc.df, aes(x=AdjustedTime, y=TimeDifference)) + geom_point()
+
+ggplot(hourly_data.df, aes(x=Datetime, y=CO2em, col=as.character(Analyser_position))) + geom_point()
 ggsave("./plots/CO2em.pdf")
-ggplot(selected_data.df, aes(x=AdjustedTime, y=CH4em, col=as.character(Analyser_position))) + geom_point()
+ggplot(hourly_data.df, aes(x=Datetime, y=CH4em, col=as.character(Analyser_position))) + geom_point
 ggsave("./plots/CH4em.pdf")
 
+ggplot(selected_data.df, aes(x=AdjustedTime, y=N2Oem, col=as.character(Analyser_position))) + geom_point()
 
 # ggplot(merged.df[hour(merged.df$CVPtime5sec)>7 & hour(merged.df$CVPtime5sec)<10,], aes(x=AdjustedTime, y=CH4em, col=as.character(Analyser_position))) + geom_point()
 
 test <- selected_data.df[selected_data.df$CO2em < 300,]
-print(test)
