@@ -117,6 +117,8 @@ cvp_timeTitle <- "Datetime"
 cvps.ls <- lapply(cvp_files,  function(x){ return(aggregBy5Sec(cvp_suffix, x, cvp_timeTitle))})
 cvp.df <- unique(do.call("rbind", cvps.ls))
 
+ggplot(cvp.df, aes(x=cvp.df$Datetime, y=cvp.df$Datetime)) + geom_point()
+
 # ggplot(cvp.df, aes(x=Datetime, y=PC1))+geom_point()
 
 # ADC data frame
@@ -134,7 +136,13 @@ adc_files <- list(
   "./../csv/ADCBarn/ADCGasData_18111600.CSV",
   "./../csv/ADCBarn/ADCGasData_18111700.CSV",
   "./../csv/ADCBarn/ADCGasData_18111800.CSV",
-  "./../csv/ADCBarn/ADCGasData_18111900.CSV")
+  "./../csv/ADCBarn/ADCGasData_18111900.CSV",
+  "./../csv/ADCBarn/ADCGasData_18112000.CSV",
+  "./../csv/ADCBarn/ADCGasData_18112100.CSV",
+  "./../csv/ADCBarn/ADCGasData_18112200.CSV",
+  "./../csv/ADCBarn/ADCGasData_18112300.CSV",
+  "./../csv/ADCBarn/ADCGasData_18112400.CSV",
+  "./../csv/ADCBarn/ADCGasData_18112500.CSV")
 adc_timeTitle <- "AdjustedTime"
 
 adcs.ls <- lapply(adc_files,  function(x){ return(aggregBy5Sec(adc_suffix, x, adc_timeTitle))})
@@ -161,6 +169,8 @@ gs_files <- list(
 gs_timeTitle <- "Time"
 gss.ls <- lapply(gs_files, function(x){return(aggregBy5Sec(gs_suffix, x, gs_timeTitle))})
 gs.df <- unique(do.call("rbind", gss.ls))
+
+ggplot(gs.df, aes(x=Time, y=Time)) + geom_point()
 
 
 # merging....
@@ -192,21 +202,18 @@ hourly_data.df <- aggregate(selected_data.df, by = list(selected_data.df$Datetim
 daily_data.df <- aggregate(selected_data.df, by = list(selected_data.df$Date, selected_data.df$Analyser_position), FUN = adaptedMean)
 
 extValue <- function(df, gas, datetime){
-  value <- df[ which(df[,"Datetime"] == datetime & df[,"Analyser_position"] == "Ext"), gas]
+  value <- df[which(df[,"Datetime"] == datetime & df[,"Analyser_position"] == "Ext"), gas]
   return(value)
 }
 
-gas_list = list("CO2", "CH4", "N2O", "NH3", "H2O")
+gas_list <- list("CO2", "CH4", "N2O", "NH3", "H2O")
 
 for (gas in gas_list){
-  name <- paste(gas,"_","Ext")
-  hourly_data.df[,name] <- lapply(hourly_data.df$Datetime, function(x) { return(extValue(hourly_data.df, gas, x))})
+ name <- paste0(gas,"_","Ext")
+ hourly_data.df[, name] <- as.numeric(sapply(hourly_data.df$Datetime, function(x) {extValue(hourly_data.df, gas, x)}))
 }
 
 colnames(hourly_data.df)
-
-hourly_data.df$Analyser_position
-
 hourly_data.df <- hourly_data.df[hourly_data.df$Analyser_position!="Ext",]
 
 # Emmission Fct here!
@@ -238,16 +245,12 @@ ggsave("./plots/CO2em.pdf")
 ggplot(hourly_data.df, aes(x=Datetime, y=CH4em, col=as.character(Analyser_position))) + geom_point
 ggsave("./plots/CH4em.pdf")
 
-ggplot(selected_data.df, aes(x=AdjustedTime, y=N2Oem, col=as.character(Analyser_position))) + geom_point()
+colnames(hourly_data.df)
+ggplot(hourly_data.df, aes(x=ymd_h(Datetime), y=(CH4-CH4_Ext), col=as.character(Analyser_position))) + geom_smooth()
+ggplot(hourly_data.df, aes(x=ymd_h(Datetime), y=(CO2-CO2_Ext), col=as.character(Analyser_position))) + geom_smooth()
+ggplot(hourly_data.df, aes(x=ymd_h(Datetime), y=(CH4-CH4_Ext)/(CO2-CO2_Ext), col=as.character(Analyser_position))) + geom_smooth()
+ggplot(hourly_data.df, aes(x=ymd_h(Datetime), y=(CH4-CH4_Ext)/(CO2-CO2_Ext), col=as.character(Analyser_position))) + geom_point()
+
+hourly_data.df
 
 ggplot(daily_data.df, aes(x=AdjustedTime, y=CH4, col=as.character(Analyser_position))) + geom_point()
-
-
-
-
-
-
-
-# ggplot(merged.df[hour(merged.df$CVPtime5sec)>7 & hour(merged.df$CVPtime5sec)<10,], aes(x=AdjustedTime, y=CH4em, col=as.character(Analyser_position))) + geom_point()
-
-test <- selected_data.df[selected_data.df$CO2em < 300,]
